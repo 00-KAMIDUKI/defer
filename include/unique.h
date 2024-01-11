@@ -60,6 +60,7 @@ private:
   [[no_unique_address]] _Deleter _M_deleter;
 
 public:
+  // TODO: make this constructor explicit
   constexpr unique(auto&& __value, _Deleter __deleter=_Deleter{}) noexcept
     requires std::is_same_v<std::decay_t<decltype(__value)>, value_type>
     : _M_value{std::forward<decltype(__value)>(__value)}
