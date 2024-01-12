@@ -3,7 +3,7 @@
 
 void f(int&) {}
 using t = raii::unique_handle<int>;
-static auto test(t& i) {
+[[maybe_unused]] static auto test(t& i) {
   auto const i1 = t{};
   auto i2 = t{1};
   auto i3 = raii::unique_handle<int, decltype([](auto) {})>{1};
@@ -11,7 +11,7 @@ static auto test(t& i) {
   f(i.get());
 }
 
-static auto test() {
+[[maybe_unused]] static auto test() {
   auto i = raii::unique<>{};
   raii::defer _{[] {}};
 }

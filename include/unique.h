@@ -39,7 +39,7 @@ concept nullable = requires(_T& __mutable, _T const& __constant) {
 
 struct __void_nullable_adapter: nullable_wrapper<bool, false> {
   constexpr __void_nullable_adapter() noexcept
-    : nullable_wrapper<bool, false>(true) { using value_type = struct {}; }
+    : nullable_wrapper<bool, false>(true) { struct value_type {}; }
 };
 
 template <typename _T>
@@ -61,6 +61,7 @@ private:
 
 public:
   // TODO: make this constructor explicit
+  // TODO: remove default value for _Deleter if _Deleter is pointer to function
   constexpr unique(auto&& __value, _Deleter __deleter=_Deleter{}) noexcept
     requires std::is_same_v<std::decay_t<decltype(__value)>, value_type>
     : _M_value{std::forward<decltype(__value)>(__value)}
