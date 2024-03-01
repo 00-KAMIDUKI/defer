@@ -9,14 +9,13 @@ template <typename _T, _T __null_element>
 struct nullable_wrapper {
   using value_type = _T;
 private:
-  value_type _M_value;
+  value_type _M_value{__null_element};
 public:
   constexpr nullable_wrapper(value_type const& __value) noexcept
     : _M_value{__value} {}
   constexpr nullable_wrapper(value_type&& __value) noexcept
     : _M_value{std::move(__value)} {}
-  constexpr nullable_wrapper() noexcept 
-    : _M_value{__null_element} {}
+  constexpr nullable_wrapper() noexcept = default;
 
   constexpr auto value() const noexcept 
     -> value_type const& { return _M_value; }
