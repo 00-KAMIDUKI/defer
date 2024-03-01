@@ -1,5 +1,5 @@
-#include <unique_handle.h>
-#include <scope_guard.h>
+#include <raii_utils/unique_handle.h>
+#include <raii_utils/scope_guard.h>
 
 void f(int&) {}
 using t = raii::unique_handle<int>;
