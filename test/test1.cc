@@ -1,5 +1,5 @@
 #include <raii_utils/unique_handle.h>
-#include <raii_utils/scope_guard.h>
+#include <raii_utils/defer.h>
 
 void f(int&) {}
 using t = raii::unique_handle<int>;
@@ -13,13 +13,13 @@ using t = raii::unique_handle<int>;
 
 [[maybe_unused]] static auto test() {
   auto i = raii::unique<>{};
-  raii::scope_guard _{[] {}};
+  raii::defer _{[] {}};
 }
 
 static auto test1() {
   bool defer_called = false;
   {
-    auto defer = raii::unique_defer{[&]() { defer_called = true; }};
+    auto defer = raii::scope_guard{[&]() { defer_called = true; }};
   }
   if (!defer_called) {
     std::exit(1);

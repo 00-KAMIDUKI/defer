@@ -130,10 +130,10 @@ public:
 };
 
 template <typename _Func>
-struct unique_defer: unique<__void_nullable_adapter, _Func> {};
+struct scope_guard: unique<__void_nullable_adapter, _Func> {};
 
 template <typename _Func>
-unique_defer(_Func) -> unique_defer<_Func>;
+scope_guard(_Func) -> scope_guard<_Func>;
 
 template <typename _T, typename _Deleter=default_deleter<_T>, auto __null_element=0>
 using unique_handle = unique<nullable_wrapper<_T, __null_element>, _Deleter>;
@@ -142,7 +142,7 @@ using unique_handle = unique<nullable_wrapper<_T, __null_element>, _Deleter>;
 using __details::nullable;
 using __details::nullable_wrapper;
 using __details::unique;
-using __details::unique_defer;
+using __details::scope_guard;
 using __details::unique_handle;
 }
 
