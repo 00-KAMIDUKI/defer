@@ -1,5 +1,5 @@
 #include <unique.h>
-#include <defer.h>
+#include <scope_guard.h>
 
 void f(int&) {}
 using t = raii::unique_handle<int>;
@@ -13,7 +13,7 @@ using t = raii::unique_handle<int>;
 
 [[maybe_unused]] static auto test() {
   auto i = raii::unique<>{};
-  raii::defer _{[] {}};
+  raii::scope_guard _{[] {}};
 }
 
 static auto test1() {
