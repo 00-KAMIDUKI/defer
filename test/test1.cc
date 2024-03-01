@@ -17,20 +17,25 @@ using t = raii::unique_handle<int>;
 }
 
 static auto test1() {
-  bool defer_called = false;
+  static bool defer_called = false;
   {
-    auto defer = raii::scope_guard{[&]() { defer_called = true; }};
+    auto defer = raii::scope_guard{[]() { defer_called = true; }};
+    static_assert(sizeof defer == 1);
   }
   if (!defer_called) {
     std::exit(1);
   }
 }
 
-bool deleter_called = false;
+#include <type_traits>
+
 static auto test2() {
+  static bool deleter_called = false;
   {
     auto deleter = [](auto) { deleter_called = true; };
     raii::unique_handle<int, decltype(deleter)> i{1};
+    static_assert(sizeof i == 4);
+    static_assert(std::is_same_v<decltype(i)::value_type, int>);
   }
   if (!deleter_called) {
     std::exit(1);

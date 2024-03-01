@@ -5,7 +5,7 @@
 namespace raii {
 namespace __details {
 
-template <typename _T, auto __null_element>
+template <typename _T, _T __null_element>
 struct nullable_wrapper {
   using value_type = _T;
 private:
@@ -15,7 +15,8 @@ public:
     : _M_value{__value} {}
   constexpr nullable_wrapper(value_type&& __value) noexcept
     : _M_value{std::move(__value)} {}
-  constexpr nullable_wrapper() noexcept = default;
+  constexpr nullable_wrapper() noexcept 
+    : _M_value{__null_element} {}
 
   constexpr auto value() const noexcept 
     -> value_type const& { return _M_value; }
@@ -36,42 +37,54 @@ concept nullable = requires(_T& __mutable, _T const& __constant) {
   { __constant.value() } -> std::convertible_to<typename _T::value_type const&>;
 };
 
-
 struct __void_nullable_adapter: nullable_wrapper<bool, false> {
   constexpr __void_nullable_adapter() noexcept
     : nullable_wrapper<bool, false>(true) { struct value_type {}; }
 };
 
 template <typename _T>
-struct default_deleter {
+struct __default_deleter {
   constexpr void operator()(_T const&) const noexcept {}
 };
 
 template <>
-struct default_deleter<__void_nullable_adapter::value_type> {
+struct __default_deleter<__void_nullable_adapter::value_type> {
   constexpr void operator()() const noexcept {}
 };
 
-template <nullable _T=__void_nullable_adapter, typename _Deleter=default_deleter<typename _T::value_type>>
+template <nullable _T=__void_nullable_adapter, typename _Deleter=__default_deleter<typename _T::value_type>>
 struct unique {
   using value_type = typename _T::value_type;
+  static_assert(std::is_reference_v<value_type> == false);
 private:
   [[no_unique_address]] _T _M_value;
   [[no_unique_address]] _Deleter _M_deleter;
 
 public:
-  // TODO: make this constructor explicit
-  // TODO: remove default value for _Deleter if _Deleter is pointer to function
-  constexpr unique(auto&& __value, _Deleter __deleter=_Deleter{}) noexcept
-    requires std::is_same_v<std::decay_t<decltype(__value)>, value_type>
-    : _M_value{std::forward<decltype(__value)>(__value)}
+  constexpr unique(value_type const& __value, _Deleter __deleter) noexcept
+    : _M_value{__value}
     , _M_deleter{__deleter} {}
+
+  constexpr unique(value_type&& __value, _Deleter __deleter) noexcept
+    : _M_value{std::move(__value)}
+    , _M_deleter{__deleter} {}
+
+  constexpr unique(value_type const& __value) noexcept
+    requires (!std::is_pointer_v<_Deleter>)
+    : _M_value{__value}
+    , _M_deleter{} {}
+
+  constexpr unique(value_type&& __value) noexcept
+    requires (!std::is_pointer_v<_Deleter>)
+    : _M_value{std::move(__value)}
+    , _M_deleter{} {}
 
   constexpr unique(_Deleter __deleter) noexcept
     : _M_value{}
     , _M_deleter{__deleter} {}
 
   constexpr unique() noexcept
+    requires (!std::is_pointer_v<_Deleter>)
     : _M_value{}
     , _M_deleter{} {}
 
@@ -135,7 +148,7 @@ struct scope_guard: unique<__void_nullable_adapter, _Func> {};
 template <typename _Func>
 scope_guard(_Func) -> scope_guard<_Func>;
 
-template <typename _T, typename _Deleter=default_deleter<_T>, auto __null_element=0>
+template <typename _T, typename _Deleter=__default_deleter<_T>, auto __null_element=0>
 using unique_handle = unique<nullable_wrapper<_T, __null_element>, _Deleter>;
 
 }
