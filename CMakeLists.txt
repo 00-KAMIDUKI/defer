@@ -4,7 +4,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(raii-utils 
-  VERSION 1.0.0
+  VERSION 0.1.0
+  DESCRIPTION "c++ RAII utilities"
+  HOMEPAGE_URL "https://github.com/00-KAMIDUKI/raii-utils"
   LANGUAGES CXX
 )
 
