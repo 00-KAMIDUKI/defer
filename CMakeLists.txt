@@ -1,37 +1,31 @@
 cmake_minimum_required(VERSION 3.28)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 project(raii-utils 
   VERSION 1.0.0
   LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-
-set(EXPORT_NAMESPACE "${PROJECT_NAME}::")
-
-add_library(${PROJECT_NAME} INTERFACE)
-add_library(${EXPORT_NAMESPACE}${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-target_include_directories(${PROJECT_NAME} INTERFACE include)
+add_library(raii-utils INTERFACE)
+add_library(raii-utils::raii-utils ALIAS raii-utils)
+target_include_directories(raii-utils INTERFACE include)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  set(IS_TOPLEVEL_PROJECT TRUE)
+  set(IS_TOPLEVEL_PROJECT ON)
 else()
-  set(IS_TOPLEVEL_PROJECT FALSE)
+  set(IS_TOPLEVEL_PROJECT OFF)
 endif()
 
-set(OPTION_PREFIX RAII_UTILS_)
+option(RAII_UTILS_BUILD_EXAMPLES "Build examples" ${IS_TOPLEVEL_PROJECT})
+option(RAII_UTILS_BUILD_TESTS    "Build tests"    ${IS_TOPLEVEL_PROJECT})
 
-option(${OPTION_PREFIX}BUILD_EXAMPLES "Build examples" ${IS_TOPLEVEL_PROJECT})
-option(${OPTION_PREFIX}BUILD_TESTS "Build tests" ${IS_TOPLEVEL_PROJECT})
-
-if(${OPTION_PREFIX}BUILD_EXAMPLES)
+if(RAII_UTILS_BUILD_EXAMPLES)
   add_subdirectory(example)
 endif()
 
-if(${OPTION_PREFIX}BUILD_TESTS)
+if(RAII_UTILS_BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 endif()

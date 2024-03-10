@@ -1,3 +1,7 @@
+#include <stdexcept>
+#include <format>
+#include <source_location>
+
 #include <raii_utils/unique_handle.h>
 #include <raii_utils/defer.h>
 
@@ -19,11 +23,11 @@ using t = raii::unique_handle<int>;
 static auto test1() {
   static bool defer_called = false;
   {
-    auto defer = raii::scope_guard{[]() { defer_called = true; }};
+    auto defer = raii::defer{[] { defer_called = true; }};
     static_assert(sizeof defer == 1);
   }
   if (!defer_called) {
-    std::exit(1);
+    throw std::runtime_error{std::format("{} failed", std::source_location::current().function_name())};
   }
 }
 
@@ -38,7 +42,7 @@ static auto test2() {
     static_assert(std::is_same_v<decltype(i)::value_type, int>);
   }
   if (!deleter_called) {
-    std::exit(1);
+    throw std::runtime_error{std::format("{} failed", std::source_location::current().function_name())};
   }
 }
 

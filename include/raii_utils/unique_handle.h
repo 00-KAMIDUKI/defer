@@ -56,89 +56,87 @@ struct unique {
   using value_type = typename _T::value_type;
   static_assert(std::is_reference_v<value_type> == false);
 private:
-  [[no_unique_address]] _T _M_value;
-  [[no_unique_address]] _Deleter _M_deleter;
-
+  std::tuple<_T, _Deleter> _M_tuple;
+  
+  auto& _M_value_wrapper() noexcept { return std::get<0>(_M_tuple); }
+  auto const& _M_value_wrapper() const noexcept { return std::get<0>(_M_tuple); }
+  auto& _M_deleter() noexcept { return std::get<1>(_M_tuple); }
+  auto const& _M_deleter() const noexcept { return std::get<1>(_M_tuple); }
 public:
-  constexpr unique(value_type const& __value, _Deleter __deleter) noexcept
-    : _M_value{__value}
-    , _M_deleter{__deleter} {}
+  constexpr unique(value_type const& __value, auto&& __deleter) noexcept
+    : _M_tuple{_T{__value}, std::forward<decltype(__deleter)>(__deleter)} {}
 
-  constexpr unique(value_type&& __value, _Deleter __deleter) noexcept
-    : _M_value{std::move(__value)}
-    , _M_deleter{__deleter} {}
+  constexpr unique(value_type&& __value, auto&& __deleter) noexcept
+    : _M_tuple{_T{std::move(__value)}, std::forward<decltype(__deleter)>(__deleter)} {}
+
+  explicit constexpr unique(auto&& __deleter) noexcept
+    requires (std::is_default_constructible_v<_T>)
+    : _M_tuple{_T{}, std::forward<decltype(__deleter)>(__deleter)} {}
 
   constexpr unique(value_type const& __value) noexcept
-    requires (!std::is_pointer_v<_Deleter>)
-    : _M_value{__value}
-    , _M_deleter{} {}
+    requires (!std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>)
+    : _M_tuple{__value, _Deleter{}} {}
 
   constexpr unique(value_type&& __value) noexcept
-    requires (!std::is_pointer_v<_Deleter>)
-    : _M_value{std::move(__value)}
-    , _M_deleter{} {}
-
-  constexpr unique(_Deleter __deleter) noexcept
-    : _M_value{}
-    , _M_deleter{__deleter} {}
+    requires (!std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>)
+    : _M_tuple{std::move(__value), _Deleter{}} {}
 
   constexpr unique() noexcept
-    requires (!std::is_pointer_v<_Deleter>)
-    : _M_value{}
-    , _M_deleter{} {}
+    requires (
+      std::is_default_constructible_v<_T>
+      && !std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>
+    ): _M_tuple{_T{}, _Deleter{}} {}
 
   unique(unique const&) = delete;
   auto operator=(unique const&) -> unique& = delete;
 
   constexpr unique(unique&& __other) noexcept
-    : _M_value{std::move(__other._M_value)}
-    , _M_deleter{std::move(__other._M_deleter)} 
-    { __other._M_value.reset(); }
+    :_M_tuple{std::move(__other._M_tuple)}
+    { __other._M_value_wrapper().reset(); }
 
   constexpr auto operator=(unique&& __other) noexcept -> unique& {
     if (this != &__other) {
-      _M_value = std::move(__other._M_value);
-      _M_deleter = std::move(__other._M_deleter);
-      __other._M_value.reset();
+      this->_M_tuple = std::move(__other._M_tuple);
+      __other._M_value_wrapper().reset();
     }
     return *this;
   }
 
   constexpr ~unique() noexcept
   requires (!std::is_same_v<_T, __void_nullable_adapter>) {
-    if (_M_value.has_value()) {
-      std::invoke(_M_deleter, _M_value.value());
+    if (this->_M_value_wrapper().has_value()) {
+      std::invoke(this->_M_deleter(), this->_M_value_wrapper().value());
     }
   }
 
   constexpr ~unique() noexcept 
   requires (std::is_same_v<_T, __void_nullable_adapter>) {
-    if (_M_value.has_value()) {
-      std::invoke(_M_deleter);
+    if (this->_M_value_wrapper().has_value()) {
+      std::invoke(this->_M_deleter());
     }
   }
 
   constexpr auto get() const noexcept 
     -> value_type const&
   requires (!std::is_same_v<_T, __void_nullable_adapter>)
-  { return _M_value.value(); }
+  { return this->_M_value_wrapper().value(); }
 
   constexpr auto get() noexcept 
     -> value_type& 
   requires (
-    requires { { _M_value.value() } -> std::convertible_to<typename _T::value_type&>; }
+    requires { { this->_M_value_wrapper().value() } -> std::convertible_to<typename _T::value_type&>; }
     && !std::is_same_v<_T, __void_nullable_adapter>
-  ) { return _M_value.value(); }
+  ) { return this->_M_value_wrapper().value(); }
 
   constexpr void reset() noexcept {
-    if (_M_value.has_value()) {
-      std::invoke(_M_deleter, _M_value.value());
-      _M_value.reset();
+    if (this->_M_value_wrapper().has_value()) {
+      std::invoke(this->_M_deleter(), this->_M_value_wrapper().value());
+      this->_M_value_wrapper().reset();
     }
   }
 
   constexpr void leak() noexcept 
-  { _M_value.reset(); }
+  { this->_M_value_wrapper().reset(); }
 };
 
 template <typename _Func>
