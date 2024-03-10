@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <format>
 #include <source_location>
+#include <cstdint>
 
 #include <raii_utils/unique_handle.h>
 #include <raii_utils/defer.h>
@@ -37,9 +38,9 @@ static auto test2() {
   static bool deleter_called = false;
   {
     auto deleter = [](auto) { deleter_called = true; };
-    raii::unique_handle<int, decltype(deleter)> i{1};
+    raii::unique_handle<std::uint32_t, decltype(deleter)> i{1};
     static_assert(sizeof i == 4);
-    static_assert(std::is_same_v<decltype(i)::value_type, int>);
+    static_assert(std::is_same_v<decltype(i)::value_type, std::uint32_t>);
   }
   if (!deleter_called) {
     throw std::runtime_error{std::format("{} failed", std::source_location::current().function_name())};

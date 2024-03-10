@@ -51,12 +51,12 @@ struct __default_deleter<__void_nullable_adapter::value_type> {
   constexpr void operator()() const noexcept {}
 };
 
-template <nullable _T=__void_nullable_adapter, typename _Deleter=__default_deleter<typename _T::value_type>>
+template <nullable _ValueWrapper=__void_nullable_adapter, typename _Deleter=__default_deleter<typename _ValueWrapper::value_type>>
 struct unique {
-  using value_type = typename _T::value_type;
+  using value_type = typename _ValueWrapper::value_type;
   static_assert(std::is_reference_v<value_type> == false);
 private:
-  std::tuple<_T, _Deleter> _M_tuple;
+  std::tuple<_ValueWrapper, _Deleter> _M_tuple;
   
   auto& _M_value_wrapper() noexcept { return std::get<0>(_M_tuple); }
   auto const& _M_value_wrapper() const noexcept { return std::get<0>(_M_tuple); }
@@ -64,28 +64,32 @@ private:
   auto const& _M_deleter() const noexcept { return std::get<1>(_M_tuple); }
 public:
   constexpr unique(value_type const& __value, auto&& __deleter) noexcept
-    : _M_tuple{_T{__value}, std::forward<decltype(__deleter)>(__deleter)} {}
+    : _M_tuple{_ValueWrapper{__value}, std::forward<decltype(__deleter)>(__deleter)} {}
 
   constexpr unique(value_type&& __value, auto&& __deleter) noexcept
-    : _M_tuple{_T{std::move(__value)}, std::forward<decltype(__deleter)>(__deleter)} {}
+    : _M_tuple{_ValueWrapper{std::move(__value)}, std::forward<decltype(__deleter)>(__deleter)} {}
 
-  explicit constexpr unique(auto&& __deleter) noexcept
-    requires (std::is_default_constructible_v<_T>)
-    : _M_tuple{_T{}, std::forward<decltype(__deleter)>(__deleter)} {}
+  explicit constexpr unique(_Deleter const& __deleter) noexcept
+    requires (std::is_default_constructible_v<_ValueWrapper>)
+    : _M_tuple{_ValueWrapper{}, __deleter} {}
+
+  explicit constexpr unique(_Deleter&& __deleter) noexcept
+    requires (std::is_default_constructible_v<_ValueWrapper>)
+    : _M_tuple{_ValueWrapper{}, std::move(__deleter)} {}
 
   constexpr unique(value_type const& __value) noexcept
     requires (!std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>)
-    : _M_tuple{__value, _Deleter{}} {}
+    : _M_tuple{_ValueWrapper{__value}, _Deleter{}} {}
 
   constexpr unique(value_type&& __value) noexcept
     requires (!std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>)
-    : _M_tuple{std::move(__value), _Deleter{}} {}
+    : _M_tuple{_ValueWrapper{std::move(__value)}, _Deleter{}} {}
 
   constexpr unique() noexcept
     requires (
-      std::is_default_constructible_v<_T>
+      std::is_default_constructible_v<_ValueWrapper>
       && !std::is_pointer_v<_Deleter> && std::is_default_constructible_v<_Deleter>
-    ): _M_tuple{_T{}, _Deleter{}} {}
+    ): _M_tuple{_ValueWrapper{}, _Deleter{}} {}
 
   unique(unique const&) = delete;
   auto operator=(unique const&) -> unique& = delete;
@@ -103,14 +107,14 @@ public:
   }
 
   constexpr ~unique() noexcept
-  requires (!std::is_same_v<_T, __void_nullable_adapter>) {
+  requires (!std::is_same_v<_ValueWrapper, __void_nullable_adapter>) {
     if (this->_M_value_wrapper().has_value()) {
       std::invoke(this->_M_deleter(), this->_M_value_wrapper().value());
     }
   }
 
   constexpr ~unique() noexcept 
-  requires (std::is_same_v<_T, __void_nullable_adapter>) {
+  requires (std::is_same_v<_ValueWrapper, __void_nullable_adapter>) {
     if (this->_M_value_wrapper().has_value()) {
       std::invoke(this->_M_deleter());
     }
@@ -118,14 +122,14 @@ public:
 
   constexpr auto get() const noexcept 
     -> value_type const&
-  requires (!std::is_same_v<_T, __void_nullable_adapter>)
+  requires (!std::is_same_v<_ValueWrapper, __void_nullable_adapter>)
   { return this->_M_value_wrapper().value(); }
 
   constexpr auto get() noexcept 
     -> value_type& 
   requires (
-    requires { { this->_M_value_wrapper().value() } -> std::convertible_to<typename _T::value_type&>; }
-    && !std::is_same_v<_T, __void_nullable_adapter>
+    requires { { this->_M_value_wrapper().value() } -> std::convertible_to<typename _ValueWrapper::value_type&>; }
+    && !std::is_same_v<_ValueWrapper, __void_nullable_adapter>
   ) { return this->_M_value_wrapper().value(); }
 
   constexpr void reset() noexcept {
